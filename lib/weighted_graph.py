@@ -1,3 +1,5 @@
+from db import get_db_sections
+
 class WeightedGraph:
     # 초기화 메소드
     #   is_directed: 방향성 여부를 나타내는 boolean 값
@@ -14,6 +16,8 @@ class WeightedGraph:
         #   룩업 딕셔너리는 Key가 (꼭짓점1, 꼭짓점2)인 튜플이고,
         #   Value는 2개 이상의 가중치를 저장할 수 있도록 가중치들의 리스트로 구성된다.
         self.weight_lookup = {}
+
+
 
     # 변을 추가하는 메소드
     #   vertex1 : 변의 한쪽 끝 꼭짓점이며, 방향성 그래프의 경우 시작점을 의미한다.

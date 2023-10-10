@@ -1,10 +1,35 @@
+#from db_util import get_db_sections
+from .db_util import *
+
 class SeoulRoad:
     # 초기화 메소드
-    def __init__(self):
+    #   conn : DB 연결 객체
+    def __init__(self, conn):
         self.graph = {}
         self.section_count = 0
-        self.spot_count = 0        
+        self.spot_count = 0
+        result = self.__build_graph(conn)
+        # 그래프가 구성되지 않으면 None을 반환한다.
+        if result == False:
+            return None
 
+    # Database의 정보로 그래프를 구성하는 Private 메소드
+    #   conn : DB 연결 객체
+    #   Return Value : 그래프 구성 성공 여부
+    def __build_graph(self, conn):
+        # DB에서 구간 정보를 가져온다.
+        sections_info = get_db_sections(conn)
+        # DB 오류가 발생하면 False를 반환한다.
+        if sections_info == None:
+            return False
+        # 각 구간의 정보를 사용해 그래프에 변을 추가한다.
+        for section_info in sections_info:
+            self.add_section(section_info[1], section_info[2], section_info[0])
+        # 그래프에 추가된 변이 없다면 False를 반환한다.
+        if self.section_count == 0:
+            return False
+        return True
+    
     # 구간을 추가하는 메소드
     #   spot1 : 구간의 시작지점 고유번호
     #   spot2 : 구간의 끝지점 고유번호
