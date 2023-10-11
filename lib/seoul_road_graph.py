@@ -3,6 +3,7 @@ from .db_util import *
 from .common_util import *
 import sys
 from psycopg_pool import ConnectionPool
+import queue
 
 
 class SeoulRoad:
@@ -229,6 +230,7 @@ class SeoulRoad:
     #   step : 구간 수
     #   Return Value : step 만큼의 구간을 지나 도착하는 지점들의 리스트
 
+
     def get_neighbors_with_step(self, spot, step):
         # 만약 더 이상 step이 남아있지 않다면 현재 지점을 반환한다.
         if step == 0:
@@ -272,3 +274,59 @@ class SeoulRoad:
                 if spot not in followed_path:
                     paths.append([spot] + followed_path)
         return paths
+
+    # bfs를 사용해 start_spot에서 end_spot까지의 모든 경로를 찾는 메소드
+    #   start_spot : 시작 지점
+    #   end_spot : 목표 지점
+    #   Return Value : 모든 경로들의 리스트
+    # 재귀 호출을 사용하는 대신 큐를 사용해 현재 경로에서 추가할 수 있는 모든 경로를 큐에 추가한다.
+    # 루프에서는 큐에서 가장 먼저 들어간 경로를 꺼내고, 해당 경로의 마지막 지점을 확인한다.
+    # 해당 경로의 마지막 지점이 목표 지점이면, 경로가 완성된 것이므로, 해당 경로를 결과리스트에 추가한다.
+    # 큐의 모든 경로를 확인해서 큐가 빌 때 까지 루프를 반복한다.
+    # 큐의 가장 앞 경로는 항상 너비를 기준으로 먼저 들어간 경로이므로 BFS 방식의 탐색이 된다.
+    def bfs_find_all_path(self, start_spot, end_spot):
+        results = []
+        q = queue.Queue()
+        # 큐에 시작 지점으로 구성된 경로를 추가한다.
+        q.put([start_spot])
+
+        while not q.empty():            # 큐가 빌 때까지 반복
+            path = q.get()              # 큐의 첫 번째 경로를 꺼낸다.
+            vertex = path[-1]           # 경로의 마지막은 현재 탐색하고 있는 지점이며
+
+            if vertex == end_spot:      # 현재 지점 = 목표 지점 : 경로 완성
+                results.append(path)
+                continue
+            # 경로가 완성되지 않았으면, 다음 구간으로의 경로를 만들어 각각을 큐에 추가한다.
+            for next in self.graph[vertex].keys():
+                # 다음 탐색할 지점이 이미 지나온 지점이면 큐에 추가하지 않는다.
+                if next not in path:
+                    q.put(path + [next])
+        return results
+
+    # dfs를 사용해 start_spot에서 end_spot까지의 모든 경로를 찾는 메소드
+    #   start_spot : 시작 지점
+    #   end_spot : 목표 지점
+    #   Return Value : 모든 경로들의 리스트
+    # 현재 경로에서 추가할 수 있는 모든 경로 중 하나를 선택해 재귀 호출한다.
+    # 이러한 방식으로 재귀 호출을 하면, 너비보다 깊이를 우선으로 경로를 탐색하게 된다.
+    def dfs_find_all_path(self, start_spot, end_spot, path=None):
+        # 탐색을 시작할 때, 즉 path가 None인 경우 현재 지점으로 구성된 경로를 생성한다.
+        if path is None:
+            path = [start_spot]
+
+        # 재귀 호출 시점의 시작 지점이 목표 지점과 동일하면 경로가 완성된 것이다.
+        if start_spot == end_spot:
+            return [path]
+
+        results = []
+        # 현재 지점에서 이동 가능한 모든 다른 지점에 대해서
+        for next in self.graph[start_spot].keys():
+            # 다음 탐색할 지점이 이미 지나온 지점이면 해당 경로는 배제한다.
+            if next not in path:
+                # 다음 탐색 지점의 경로를 만들어 재귀 호출한다.
+                result = self.dfs_find_all_path(
+                    next, end_spot, path + [next])
+                # 재귀 호출의 결과를 취합한다.
+                results += result
+        return results
