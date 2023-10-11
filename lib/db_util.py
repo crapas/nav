@@ -16,7 +16,7 @@ def get_db_sections(conn):
 #   Return Value : 구간의 거리 또는 None (DB 오류)
 
 
-def get_section_distance(conn, section):
+def get_db_section_distance(conn, section):
     try:
         rows = conn.execute(
             f"select distance from section where id = {section}").fetchall()
@@ -33,7 +33,7 @@ def get_section_distance(conn, section):
 #   Return Value : 지점의 이름 또는 None (DB 오류)
 
 
-def get_spot_name(conn, spot):
+def get_db_spot_name(conn, spot):
     try:
         rows = conn.execute(
             f"SELECT name FROM spot WHERE id = {spot}").fetchall()
@@ -50,7 +50,7 @@ def get_spot_name(conn, spot):
 #   Return Value : 지점의 고유번호 또는 None (DB 오류)
 
 
-def get_spot(conn, spot_name):
+def get_db_spots(conn, spot_name):
     try:
         rows = conn.execute(
             f"SELECT id FROM spot WHERE name = '{spot_name}'").fetchall()
@@ -58,5 +58,5 @@ def get_spot(conn, spot_name):
         return None
     # 주어진 이름의 지점이 DB에 존재하지 않는 경우
     if len(rows) == 0:
-        return None
-    return rows[0][0]
+        return []
+    return [row[0] for row in rows]

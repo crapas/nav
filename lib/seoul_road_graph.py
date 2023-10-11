@@ -2,32 +2,55 @@
 from .db_util import *
 from .common_util import *
 import sys
+from psycopg_pool import ConnectionPool
 
 
 class SeoulRoad:
-    # 초기화 메소드
-    #   conn : DB 연결 객체
-    def __init__(self, conn):
+    # 생성자 메소드
+    def __init__(self):
         self.graph = {}
         self.section_count = 0
         self.spot_count = 0
-        result = self.__build_graph(conn)
+        # DB Connection pool을 생성한다.
+        try:
+            self.db_pool = ConnectionPool(
+                "dbname=testdatabase \
+                host=localhost \
+                user=postgres \
+                password=1234",
+                min_size=1,
+                max_size=10)
+            # DB connection pool이 만들어지고 min_size 만큼의 connection이 생성될 때 까지 대기
+            self.db_pool.wait()
+        except Exception as e:  # DB 연결 오류
+            sys.stderr.write(f"DB Connection Pool이 준비되지 않았습니다. : {e}")
+            sys.exit(1)
+
+        # DB의 정보를 사용해 그래프를 구성한다.
+        result = self.__build_graph()
         # 그래프가 구성되지 않으면 None을 반환한다.
         if result == False:
             return None
 
+    # 소멸자 메소드 - DB Connection Pool을 닫는다.
+    def __del__(self):
+        self.db_pool.close()
+
     # Database의 정보로 그래프를 구성하는 Private 메소드
-    #   conn : DB 연결 객체
     #   Return Value : 그래프 구성 성공 여부
-    def __build_graph(self, conn):
-        # DB에서 구간 정보를 가져온다.
-        sections_info = get_db_sections(conn)
-        # DB 오류가 발생하면 False를 반환한다.
+    def __build_graph(self):
+        # 클래스가 가지고 있는 DB connection pool에서 connection을 가져온다.
+        with self.db_pool.connection() as conn:
+            # 구간 정보를 가져온다.
+            sections_info = get_db_sections(conn)
         if sections_info == None:
+            # DB 오류가 발생하면 False를 반환한다.
             return False
         # 각 구간의 정보를 사용해 그래프에 변을 추가한다.
         for section_info in sections_info:
-            self.add_section(section_info[1], section_info[2], section_info[0])
+            self.add_section(section_info[1],
+                             section_info[2],
+                             section_info[0])
         # 그래프에 추가된 변이 없다면 False를 반환한다.
         if self.section_count == 0:
             return False
@@ -160,7 +183,7 @@ class SeoulRoad:
     #   path : 경로를 구성하는 지점들의 리스트
     #   weight_name : 가중치의 종류
     #   Return Value : 경로 비용 또는 None (경로가 유효하지 않은 경우)
-    def validation(self, conn, path, weight_name):
+    def validation(self, path, weight_name):
         # 주어진 가중치 이름(weight_name)으로 가중치 함수를 가져온다.
         weight_function = get_weight_provider(weight_name)
         path_cost = 0
@@ -169,16 +192,30 @@ class SeoulRoad:
             sections = self.get_sections(path[i], path[i + 1])
 
             if len(sections) == 0:   # 구간이 존재하지 않는다면
-                print(
-                    f"{get_spot_name(conn, path[i])}에서 {get_spot_name(conn, path[i + 1])}로 가는 구간이 존재하지 않습니다.")
                 return None
 
             # 두 지점 사이의 구간이 여러 개라면 그 중 가장 작은 값의 가중치를 사용한다.
             min_weight = sys.maxsize
-            for section in sections:
-                weight = weight_function(conn, section)
-                if weight < min_weight:
-                    min_weight = weight
+            # DB Connection을 가지고 온다.
+            with self.db_pool.connection() as conn:
+                for section in sections:
+                    weight = weight_function(conn, section)
+                    if weight < min_weight:
+                        min_weight = weight
             path_cost += min_weight
 
         return path_cost
+
+    # DB Connection Pool을 반환하는 메소드
+    def get_db_pool(self):
+        return self.db_pool
+
+    # 현재 그래프 상의 spot_name의 지점 고유번호를 반환하는 메소드
+    def get_db_spots(self, spot_name):
+        with self.db_pool.connection() as conn:
+            return get_db_spots(conn, spot_name)
+
+    # 현재 그래프 상의 spot의 지점 이름을 반환하는 메소드
+    def get_db_spot_name(self, spot):
+        with self.db_pool.connection() as conn:
+            return get_db_spot_name(conn, spot)
