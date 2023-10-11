@@ -86,3 +86,18 @@ max_path_by_spot_name = [seoul_road.get_db_spot_name(
 
 print(f"최단 경로 : {min_path_by_spot_name} (총 거리 : {min_cost})")
 print(f"최장 경로 : {max_path_by_spot_name} (총 거리 : {max_cost})")
+
+result_spots = seoul_road.get_neighbors_with_step(1220022800, 5)
+result_spots_with_spot_name = [
+    seoul_road.get_db_spot_name(spot) for spot in result_spots]
+print(len(result_spots_with_spot_name))
+print(result_spots_with_spot_name)
+
+paths = seoul_road.get_paths_with_step(1220022800, 5)
+paths_by_spot_name = []
+for path in paths:
+    #    for spot in path:
+    paths_by_spot_name.append(
+        [seoul_road.get_db_spot_name(spot) for spot in path])
+for path_by_spot_name in paths_by_spot_name:
+    print(path_by_spot_name)

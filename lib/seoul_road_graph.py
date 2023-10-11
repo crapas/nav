@@ -7,7 +7,7 @@ from psycopg_pool import ConnectionPool
 
 class SeoulRoad:
     # 생성자 메소드
-    def __init__(self):
+    def __init__(self, build_graph=True):
         self.graph = {}
         self.section_count = 0
         self.spot_count = 0
@@ -27,10 +27,11 @@ class SeoulRoad:
             sys.exit(1)
 
         # DB의 정보를 사용해 그래프를 구성한다.
-        result = self.__build_graph()
-        # 그래프가 구성되지 않으면 None을 반환한다.
-        if result == False:
-            return None
+        if build_graph:
+            result = self.__build_graph()
+            # 그래프가 구성되지 않으면 None을 반환한다.
+            if result == False:
+                return None
 
     # 소멸자 메소드 - DB Connection Pool을 닫는다.
     def __del__(self):
@@ -219,3 +220,55 @@ class SeoulRoad:
     def get_db_spot_name(self, spot):
         with self.db_pool.connection() as conn:
             return get_db_spot_name(conn, spot)
+
+
+############### For Exercise ###############
+
+    # step 만큼의 구간을 지나 도착하는 지점들을 반환하는 메소드
+    #   spot : 시작 지점
+    #   step : 구간 수
+    #   Return Value : step 만큼의 구간을 지나 도착하는 지점들의 리스트
+
+    def get_neighbors_with_step(self, spot, step):
+        # 만약 더 이상 step이 남아있지 않다면 현재 지점을 반환한다.
+        if step == 0:
+            return [spot]
+        neighbors = []
+        # 이웃 지점의 목록을 구한 후
+        for neighbor in self.graph[spot].keys():
+            # 각 이웃 지점에서 step - 1 만큼의 구간을 지나 도착하는 지점들을 구하도록 재귀호출한다.
+            # 결과를 neighbors에 추가하는데, 이 메소드는 중복이 없는 메소드가 되어야 하므로
+            # set으로 변환한 후 다시 리스트로 변환하는 방식으로 중복을 제거한다.
+            neighbors = list(
+                set(neighbors + self.get_neighbors_with_step(neighbor, step - 1)))
+        return neighbors
+
+    # 주어진 spot으로부터 출발해 step 만큼의 구간으로 구성된 모든 경로를 반환하는 메소드
+    #   spot : 시작 지점
+    #   step : 구간 수
+    #   Return Value : step 만큼의 구간으로 구성된 모든 경로들의 리스트
+    #
+    #   매 재귀 호출 마다 반환되는 값은 다음과 같다.
+    #       만약 step이 0인 경우 [spot]을 반환한다.
+    #       만약 step이 0이 아닌데 더 이상 이웃 지점이 없다면 빈 리스트를 반환한다.
+    #       만약 step이 0이 아니고 이웃 지점이 있다면 이웃 지점과 step - 1로 재귀 호출한 후
+    #           모든 반환된 결과 리스트의 가장 앞에 spot을 추가한 리스트를 반환한다.
+    #           step이 0이 아니고 재귀호출이 종료된 경우는 빈 리스트를 반환하므로, 이 때
+    #           결과에 추가되지 않는다.
+    def get_paths_with_step(self, spot, step):
+        # 만약 더 이상 step이 남아있지 않다면 현재 지점만으로 구성된 경로를 반환한다.
+        if step == 0:
+            return [[spot]]
+        paths = []
+        # step이 남아 있으면 이웃 지점들을 구한 후
+        for neighbor in self.graph[spot].keys():
+            # 각각의 이웃, step - 1로 재귀 호출한다.
+            followed_paths = self.get_paths_with_step(neighbor, step - 1)
+            # 모든 재귀 호출의 결과를 취합하되,
+            #   현재 지점이 포함되지 않은 경로만을 대상으로
+            #   현재 지점을 경로의 앞에 추가한다.
+            #   빈 리스트([])가 반환되는 경우, 아래의 루프에 들어가지 않으므로 배제된다.
+            for followed_path in followed_paths:
+                if spot not in followed_path:
+                    paths.append([spot] + followed_path)
+        return paths
