@@ -35,73 +35,44 @@ end_spot = 1220015300
 print("---------BFS 탐색 결과-----------")
 
 all_path = simple_road.bfs_find_all_path(start_spot, end_spot)
-for path in all_path:
-    path_by_spot_name = [simple_road.get_db_spot_name(spot) for spot in path]
-    print(path_by_spot_name)
+min_path_cost = sys.maxsize
+# 같은 경로 비용의 둘 이상의 최단 경로가 존재할 수 있으므로
+# 최단 경로를 모두 찾는다.
+min_paths = []
+for path, path_cost in all_path.items():
+    if path_cost < min_path_cost:
+        min_path_cost = path_cost
+        min_paths = [path]
+    elif path_cost == min_path_cost:
+        min_paths.append(path)
+
+for min_path in min_paths:
+    path_by_spot_name = [
+        simple_road.get_db_spot_name(spot) for spot in min_path]
+    print(f"최소 경로 : {path_by_spot_name}, 경로 비용 : {min_path_cost}m")
 
 print("---------DFS 탐색 결과-----------")
 
-all_path = simple_road.dfs_find_all_path(
-    start_spot, end_spot, path=[start_spot])
-for path in all_path:
-    path_by_spot_name = [simple_road.get_db_spot_name(spot) for spot in path]
-    print(path_by_spot_name)
+all_path = simple_road.dfs_find_all_path(start_spot, end_spot)
+min_path_cost = sys.maxsize
+# 같은 경로 비용의 둘 이상의 최단 경로가 존재할 수 있으므로
+# 최단 경로를 모두 찾는다.
+min_paths = []
+for path, path_cost in all_path.items():
+    if path_cost < min_path_cost:
+        min_path_cost = path_cost
+        min_paths = [path]
+    elif path_cost == min_path_cost:
+        min_paths.append(path)
+
+for min_path in min_paths:
+    path_by_spot_name = [
+        simple_road.get_db_spot_name(spot) for spot in min_path]
+    print(f"최소 경로 : {path_by_spot_name}, 경로 비용 : {min_path_cost}m")
 
 
-# import networkx as nx
-# import matplotlib.pyplot as plt
-# plt.rc("font", family="AppleGothic")
-
-# spot_dict = {}
-# spot_dict  1220019400, 영동4교
-# spot_dict  1220022800, 개포동역
-# spot_dict  1220016500, 개포고교
-# spot_dict  1220017700, 경기여고앞
-# spot_dict  1220015300, 개포3,4단지
-# spot_dict  1220000300, 구룡마을입구
-# spot_dict  1220013900, 구룡터널
-# spot_dict  1220003500, 구룡초교
-# spot_dict  1220003700, 개포시립도서관입구
-# spot_dict  1220024700, 영동5교
-# spot_dict  1220028000, 대치역
-# spot_dict  1220024100, 도곡역
-
-# G = nx.DiGraph()
-# G.add_edge(spot_dict[1220022800], spot_dict[1220016500])
-# G.add_edge(spot_dict[1220016500], spot_dict[1220022800])
-# G.add_edge(spot_dict[1220022800], spot_dict[1220017700])
-# G.add_edge(spot_dict[1220016500], spot_dict[1220019400])
-# G.add_edge(spot_dict[1220016500], spot_dict[1220003700])
-# G.add_edge(spot_dict[1220016500], spot_dict[1220003500])
-# G.add_edge(spot_dict[1220017700], spot_dict[1220022800])
-# G.add_edge(spot_dict[1220017700], spot_dict[1220015300])
-# G.add_edge(spot_dict[1220015300], spot_dict[1220017700])
-# G.add_edge(spot_dict[1220015300], spot_dict[1220000300])
-# G.add_edge(spot_dict[1220000300], spot_dict[1220015300])
-# G.add_edge(spot_dict[1220000300], spot_dict[1220003700])
-# G.add_edge(spot_dict[1220013900], spot_dict[1220000300])
-# G.add_edge(spot_dict[1220003500], spot_dict[1220013900])
-# G.add_edge(spot_dict[1220003700], spot_dict[1220016500])
-# G.add_edge(spot_dict[1220003700], spot_dict[1220000300])
-# G.add_edge(spot_dict[1220024700], spot_dict[1220022800])
-# G.add_edge(spot_dict[1220028000], spot_dict[1220024700])
-# G.add_edge(spot_dict[1220028000], spot_dict[1220024100])
-# G.add_edge(spot_dict[1220024100], spot_dict[1220019400])
-# G.add_edge(spot_dict[1220024100], spot_dict[1220028000])
-# G.add_edge(spot_dict[1220019400], spot_dict[1220024100])
-# G.add_edge(spot_dict[1220019400], spot_dict[1220016500])
-# nx.draw(G, with_labels=True)
-# plt.savefig('graph.png')
-
-# 0spot_dict  1220019400, 영동4교
-# 1spot_dict  1220022800, 개포동역
-# 2spot_dict  1220016500, 개포고교
-# 3spot_dict  1220017700, 경기여고앞
-# 4spot_dict  1220015300, 개포3,4단지
-# 5spot_dict  1220000300, 구룡마을입구
-# 6spot_dict  1220013900, 구룡터널
-# 7spot_dict  1220003500, 구룡초교
-# 8spot_dict  1220003700, 개포시립도서관입구
-# 9spot_dict  1220024700, 영동5교
-# 10spot_dict  1220028000, 대치역
-# 11spot_dict  1220024100, 도곡역
+# all_path = simple_road.dfs_find_all_path(
+#     start_spot, end_spot, path=[start_spot])
+# for path in all_path:
+#     path_by_spot_name = [simple_road.get_db_spot_name(spot) for spot in path]
+#     print(path_by_spot_name)

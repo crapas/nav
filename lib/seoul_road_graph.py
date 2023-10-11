@@ -230,7 +230,6 @@ class SeoulRoad:
     #   step : 구간 수
     #   Return Value : step 만큼의 구간을 지나 도착하는 지점들의 리스트
 
-
     def get_neighbors_with_step(self, spot, step):
         # 만약 더 이상 step이 남아있지 않다면 현재 지점을 반환한다.
         if step == 0:
@@ -285,17 +284,22 @@ class SeoulRoad:
     # 큐의 모든 경로를 확인해서 큐가 빌 때 까지 루프를 반복한다.
     # 큐의 가장 앞 경로는 항상 너비를 기준으로 먼저 들어간 경로이므로 BFS 방식의 탐색이 된다.
     def bfs_find_all_path(self, start_spot, end_spot):
-        results = []
+        results = {}
         q = queue.Queue()
         # 큐에 시작 지점으로 구성된 경로를 추가한다.
         q.put([start_spot])
 
         while not q.empty():            # 큐가 빌 때까지 반복
+            print(q.qsize())
             path = q.get()              # 큐의 첫 번째 경로를 꺼낸다.
             vertex = path[-1]           # 경로의 마지막은 현재 탐색하고 있는 지점이며
 
             if vertex == end_spot:      # 현재 지점 = 목표 지점 : 경로 완성
-                results.append(path)
+                # 찾은 경로의 distance 기준의 경로 비용을 계산한다.
+                path_cost = self.validation(path, "distance")
+                # 경로를 키로, 경로 비용을 값으로 하는 딕셔너리를 만든다.
+                # 리스트는 키로 사용할 수 없으므로 튜플로 변환한다.
+                results[tuple(path)] = path_cost
                 continue
             # 경로가 완성되지 않았으면, 다음 구간으로의 경로를 만들어 각각을 큐에 추가한다.
             for next in self.graph[vertex].keys():
@@ -312,7 +316,9 @@ class SeoulRoad:
     # 이러한 방식으로 재귀 호출을 하면, 너비보다 깊이를 우선으로 경로를 탐색하게 된다.
     def dfs_find_all_path(self, start_spot, end_spot, path=None):
         # 탐색을 시작할 때, 즉 path가 None인 경우 현재 지점으로 구성된 경로를 생성한다.
+        initial_find = False
         if path is None:
+            initial_find = True  # 최초 탐색 여부를 기록한다.
             path = [start_spot]
 
         # 재귀 호출 시점의 시작 지점이 목표 지점과 동일하면 경로가 완성된 것이다.
@@ -329,4 +335,16 @@ class SeoulRoad:
                     next, end_spot, path + [next])
                 # 재귀 호출의 결과를 취합한다.
                 results += result
+
+        # 최초 탐색의 경우 딕셔너리 형태로 반환 폼으로 만들고
+        # 재귀 호출 중인 경우는 경로의 리스트 형태로 반환해서 재귀호출의 결과를 처리할 수 있도록 한다.
+        if initial_find:
+            result_dict = {}
+            for result_path in results:
+                # 찾은 경로의 distance 기준의 경로 비용을 계산한다.
+                path_cost = self.validation(result_path, "distance")
+                # 경로를 키로, 경로 비용을 값으로 하는 딕셔너리를 만든다.
+                # 리스트는 키로 사용할 수 없으므로 튜플로 변환한다.
+                result_dict[tuple(result_path)] = path_cost
+            return result_dict
         return results
