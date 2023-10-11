@@ -1,30 +1,54 @@
-#from db_util import get_db_sections
+from psycopg_pool import ConnectionPool
 from .db_util import *
+import sys
 
 class SeoulRoad:
-    # 초기화 메소드
-    #   conn : DB 연결 객체
-    def __init__(self, conn):
+    # 생성자 메소드
+    def __init__(self):
         self.graph = {}
         self.section_count = 0
         self.spot_count = 0
-        result = self.__build_graph(conn)
+        # DB Connection pool을 생성한다.
+        try:
+            self.db_pool = ConnectionPool(
+                "dbname=testdatabase \
+                host=localhost \
+                user=postgres \
+                password=1234", 
+                min_size=1, 
+                max_size=10)
+            # DB connection pool이 만들어지고 min_size 만큼의 connection이 생성될 때 까지 대기
+            self.db_pool.wait()
+        except Exception as e:  # DB 연결 오류
+            sys.stderr.write(f"DB Connection Pool이 준비되지 않았습니다. : {e}")
+            sys.exit(1)
+        
+        # DB의 정보를 사용해 그래프를 구성한다.
+        result = self.__build_graph()
         # 그래프가 구성되지 않으면 None을 반환한다.
         if result == False:
             return None
 
+    # 소멸자 메소드 - DB Connection Pool을 닫는다.
+    def __del__(self):
+        self.db_pool.close()
+
+
     # Database의 정보로 그래프를 구성하는 Private 메소드
-    #   conn : DB 연결 객체
     #   Return Value : 그래프 구성 성공 여부
-    def __build_graph(self, conn):
-        # DB에서 구간 정보를 가져온다.
-        sections_info = get_db_sections(conn)
-        # DB 오류가 발생하면 False를 반환한다.
+    def __build_graph(self):
+        # 클래스가 가지고 있는 DB connection pool에서 connection을 가져온다.
+        with self.db_pool.connection() as conn:
+            # 구간 정보를 가져온다.
+            sections_info = get_db_sections(conn)
         if sections_info == None:
+            # DB 오류가 발생하면 False를 반환한다.
             return False
         # 각 구간의 정보를 사용해 그래프에 변을 추가한다.
         for section_info in sections_info:
-            self.add_section(section_info[1], section_info[2], section_info[0])
+            self.add_section(section_info[1], 
+                             section_info[2], 
+                             section_info[0])
         # 그래프에 추가된 변이 없다면 False를 반환한다.
         if self.section_count == 0:
             return False
