@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta name="referrer" content="no-referrer-when-downgrade" />
+    <title>Find Path MVP</title>
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='style.css') }}"
+    />
+  </head>
+  <body>
+    <div id="options">
+      <table>
+        <tr>
+          <td>출발지 :</td>
+          <td>
+            <input type="text" id="start_spot" value="개포동역" />
+          </td>
+        </tr>
+        <tr>
+          <td>도착지 :</td>
+          <td>
+            <input type="text" id="end_spot" value="대치역" />
+          </td>
+        </tr>
+        <tr>
+          <td colspan="2" class="button">
+            <button onclick="showPath()">경로추천</button>
+          </td>
+        </tr>
+      </table>
+    </div>
+    <div id="map" style="width: 100%; height: 800px"></div>
+    <script
+      type="text/javascript"
+      src="//dapi.kakao.com/v2/maps/sdk.js?appkey=255c8003e56f5e2563fe60677a5f299f"
+    ></script>
+    <script src="{{ url_for('static', filename='script.js') }}" defer></script>
+  </body>
+</html>

@@ -1,9 +1,14 @@
 # from db_util import get_db_sections
-from .db_util import *
-from .common_util import *
+import sys
+sys.path.append('..')
+import lib.db_util
+import lib.common_util
+# from .db_util import *
+# from .common_util import *
 import sys
 from psycopg_pool import ConnectionPool
 import queue
+import heapq
 
 
 class SeoulRoad:
@@ -44,7 +49,7 @@ class SeoulRoad:
         # 클래스가 가지고 있는 DB connection pool에서 connection을 가져온다.
         with self.db_pool.connection() as conn:
             # 구간 정보를 가져온다.
-            sections_info = get_db_sections(conn)
+            sections_info = lib.db_util.get_all_sections(conn)
         if sections_info == None:
             # DB 오류가 발생하면 False를 반환한다.
             return False
@@ -215,12 +220,225 @@ class SeoulRoad:
     # 현재 그래프 상의 spot_name의 지점 고유번호를 반환하는 메소드
     def get_db_spots(self, spot_name):
         with self.db_pool.connection() as conn:
-            return get_db_spots(conn, spot_name)
+            return lib.db_util.get_spots(conn, spot_name)
 
     # 현재 그래프 상의 spot의 지점 이름을 반환하는 메소드
     def get_db_spot_name(self, spot):
         with self.db_pool.connection() as conn:
-            return get_db_spot_name(conn, spot)
+            return lib.db_util.get_spot_name(conn, spot)
+
+    def get_db_spot_names(self, spots):
+        spot_name_list = []
+        with self.db_pool.connection() as conn:
+            for spot in spots:
+                spot_name = lib.db_util.get_spot_name(conn, spot)
+                if spot_name == None:
+                    return None
+                spot_name_list.append(spot_name)
+        return spot_name_list
+
+    def get_db_spot_infos(self, spots):
+        spot_info_list = []
+        with self.db_pool.connection() as conn:
+            for spot in spots:
+                spot_info = lib.db_util.get_spot_info(conn, spot)
+                if spot_info == None:
+                    return None
+                spot_info_list.append(
+                    {'spot_name': spot_info[0], 'y': spot_info[1], 'x': spot_info[2]})
+        return spot_info_list
+
+
+# 1220022800,1220024800,1220028000,1220031300,1220034700,1220037400,1220035900,1220041800,1220039900,1220038300,1210040400,1210039200,1210038500,1210041200,1210037300,1210035800,1210006100,1210035700,1190001300,1190011000,1190017400,1190002500,1190026100,1190024600,1180030300,1190000300,1190002700,1180028000
+
+############### Optimal Path Calculation ###############
+
+
+    def get_optimal_path(self, start_spot_name, end_spot_name, weight_name, path_type):
+
+        # weight_function = None
+        # if path_type == 'static':
+        #     if weight_name == 'distance':
+        #         weight_function = db_util.get_section_distance
+        #     elif weight_name == 'time_by_limit_speed':
+        #         weight_function = db_util.get_section_time_by_limit
+        #     elif weight_name == 'time_by_avg_speed1':
+        #         weight_function = db_util.get_average_speed
+        #     elif weight_name == 'time_by_avg_speed2':
+        #         weight_function = db_util.get_average_speed_wday
+        # if weight_function == None:
+        #     return {'result': False, 'cause': 'weight_name is not valid'}
+
+        # 시작점, 끝 점의 고유번호를 구한다. 일단 2개 이상의 값이 오는 경우 첫 번째 값을 사용한다.
+        start_spots = self.get_db_spots(start_spot_name)
+        if len(start_spots) == 0:
+            return {'result': False, 'cause': 'start_spot is not valid'}
+        end_spots = self.get_db_spots(end_spot_name)
+        if len(end_spots) == 0:
+            return {'result': False, 'cause': 'end_spot is not valid'}
+        start_spot = start_spots[0]
+        end_spot = end_spots[0]
+        optimal_path = self.__dijkstra(
+            start_spot, end_spot, weight_name, path_type)
+        return optimal_path
+
+    def __dijkstra(self, start, end, weight_name, path_type):
+
+        # initialize
+        distance = {}
+        previous = {}
+        edge_in_this_path = {}
+        queue = []
+
+        for vertex in self.graph.keys():
+            distance[vertex] = float('inf')
+            previous[vertex] = None
+            heapq.heappush(queue, (distance[vertex], vertex))
+        distance[start] = 0
+        heapq.heappush(queue, (distance[start], start))
+        with self.db_pool.connection() as conn:
+            # calculate
+            while queue:
+                current_distance, current_vertex = heapq.heappop(queue)
+                if current_distance > distance[current_vertex]:
+                    continue
+                for next_vertex in self.graph[current_vertex].keys():
+                    cost_for_next, edge_to_next = lib.db_util.get_min_cost(conn,
+                                                                           current_vertex, next_vertex, weight_name, path_type, current_distance)
+    #                cost_for_next, edge_to_next = self.__weight.get_weight(
+    #                    current_vertex, next_vertex)
+                    next_distance = current_distance + cost_for_next
+    #                next_distance = current_distance + self.__weight.get_weight(current_vertex, next_vertex)
+
+                    if next_distance < distance[next_vertex]:
+                        distance[next_vertex] = next_distance
+                        previous[next_vertex] = current_vertex
+                        edge_in_this_path[(
+                            current_vertex, next_vertex)] = edge_to_next
+
+                        heapq.heappush(
+                            queue, (distance[next_vertex], next_vertex))
+        # return
+        if distance[end] == float('inf'):
+            return {'result': False, 'cause': 'Cannot connect start to end with valid section weights'}
+        path_by_vertex = []
+        path_by_edge = []
+        current_vertex = end
+        while current_vertex != None:
+            path_by_vertex.insert(0, current_vertex)
+            previous_vertex = previous[current_vertex]
+            if previous_vertex != None:
+                path_by_edge.insert(
+                    0, edge_in_this_path[(previous_vertex, current_vertex)])
+            current_vertex = previous_vertex
+
+        return {'result': True, 'cost': distance[end], 'path_by_spots': path_by_vertex, 'path_by_sections': path_by_edge}
+
+    def dijkstra_distance(self, start, end, weight_name, path_type):
+
+        # initialize
+        distance = {}
+        previous = {}
+        edge_in_this_path = {}
+        queue = []
+
+        for vertex in self.graph.keys():
+            distance[vertex] = float('inf')
+#            previous[vertex] = None
+            heapq.heappush(queue, (distance[vertex], vertex))
+        distance[start] = 0
+        heapq.heappush(queue, (distance[start], start))
+        with self.db_pool.connection() as conn:
+            # calculate
+            while queue:
+                current_distance, current_vertex = heapq.heappop(queue)
+                if current_distance > distance[current_vertex]:
+                    continue
+                for next_vertex in self.graph[current_vertex].keys():
+                    cost_for_next, _ = lib.db_util.get_min_cost(conn,
+                                                                current_vertex, next_vertex, weight_name, path_type, current_distance)
+    #                cost_for_next, edge_to_next = self.__weight.get_weight(
+    #                    current_vertex, next_vertex)
+                    next_distance = current_distance + cost_for_next
+    #                next_distance = current_distance + self.__weight.get_weight(current_vertex, next_vertex)
+                    print(next_vertex, next_distance)
+
+                    if next_distance < distance[next_vertex]:
+                        distance[next_vertex] = next_distance
+#                        previous[next_vertex] = current_vertex
+#                        edge_in_this_path[(
+#                            current_vertex, next_vertex)] = edge_to_next
+#                        if next_vertex == 1220017700:
+                        heapq.heappush(
+                            queue, (distance[next_vertex], next_vertex))
+        # return
+        if distance[end] == float('inf'):
+            return {'result': False, 'cause': 'Cannot connect start to end with valid section weights'}
+        path_by_vertex = []
+        path_by_edge = []
+        # current_vertex = end
+#        while current_vertex != None:
+#            path_by_vertex.insert(0, current_vertex)
+#            previous_vertex = previous[current_vertex]
+#            if previous_vertex != None:
+#                path_by_edge.insert(
+#                    0, edge_in_this_path[(previous_vertex, current_vertex)])
+        #    current_vertex = previous_vertex
+
+        return {'result': True, 'cost': distance[end], 'path_by_spots': path_by_vertex, 'path_by_sections': path_by_edge}
+
+    def dijkstra_path(self, start, end, weight_name, path_type):
+
+        # initialize
+        distance = {}
+        previous = {}
+        edge_in_this_path = {}
+        queue = []
+
+        for vertex in self.graph.keys():
+            distance[vertex] = float('inf')
+            previous[vertex] = None
+            heapq.heappush(queue, (distance[vertex], vertex))
+        distance[start] = 0
+        heapq.heappush(queue, (distance[start], start))
+        with self.db_pool.connection() as conn:
+            # calculate
+            while queue:
+                current_distance, current_vertex = heapq.heappop(queue)
+                if current_distance > distance[current_vertex]:
+                    continue
+                for next_vertex in self.graph[current_vertex].keys():
+                    cost_for_next, edge_to_next = lib.db_util.get_min_cost(conn,
+                                                                           current_vertex, next_vertex, weight_name, path_type, current_distance)
+    #                cost_for_next, edge_to_next = self.__weight.get_weight(
+    #                    current_vertex, next_vertex)
+                    next_distance = current_distance + cost_for_next
+    #                next_distance = current_distance + self.__weight.get_weight(current_vertex, next_vertex)
+
+                    if next_distance < distance[next_vertex]:
+                        distance[next_vertex] = next_distance
+                        previous[next_vertex] = current_vertex
+                        edge_in_this_path[(
+                            current_vertex, next_vertex)] = edge_to_next
+                        if next_vertex == 2400080300:
+                            print(next_vertex, next_distance)
+                        heapq.heappush(
+                            queue, (distance[next_vertex], next_vertex))
+        # return
+        if distance[end] == float('inf'):
+            return {'result': False, 'cause': 'Cannot connect start to end with valid section weights'}
+        path_by_vertex = []
+        path_by_edge = []
+        current_vertex = end
+        while current_vertex != None:
+            path_by_vertex.insert(0, current_vertex)
+            previous_vertex = previous[current_vertex]
+            if previous_vertex != None:
+                path_by_edge.insert(
+                    0, edge_in_this_path[(previous_vertex, current_vertex)])
+            current_vertex = previous_vertex
+        return distance[end], path_by_vertex, path_by_edge
+        # return {'result': True, 'cost': distance[end], 'path_by_spots': path_by_vertex, 'path_by_sections': path_by_edge}
 
 
 ############### For Exercise ###############

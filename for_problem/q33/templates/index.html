@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!--css 외부 파일 style.css 삽입-->
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='style.css') }}"
+    />
+    <title>My First Map Application</title>
+  </head>
+  <body>
+    <div id="options" style="overflow: auto">
+      <table>
+        <tr>
+          <td>경도: <input type="text" id="coord_x" /><br /></td>
+        </tr>
+        <tr>
+          <td>위도: <input type="text" id="coord_y" /><br /></td>
+        </tr>
+        <tr>
+          <td><button onclick="set_center()">중심</button></td>
+        </tr>
+        <tr>
+          <td><button onclick="include_point()">포함</button></td>
+        </tr>
+        <tr>
+          <td><button onclick="init_map()">초기화</button></td>
+        </tr>
+      </table>
+    </div>
+    <div id="map" style="width: 800px; height: 600px"></div>
+    <script
+      type="text/javascript"
+      src="//dapi.kakao.com/v2/maps/sdk.js?appkey=255c8003e56f5e2563fe60677a5f299f"
+    ></script>
+    <script src="{{ url_for('static', filename='script.js') }}" defer></script>
+  </body>
+</html>

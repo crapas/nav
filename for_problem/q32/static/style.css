@@ -1,0 +1,12 @@
+/* CSS for the page */
+
+/* 경계가 없는 테이블 */
+table {
+  border-collapse: collapse;
+  width: 100%;
+}
+
+/* 경계가 없는 셀 */
+td {
+  border: none;
+}

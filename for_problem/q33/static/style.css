@@ -1,0 +1,17 @@
+/* CSS for the page */
+
+body {
+  display: flex;
+  margin: 0;
+  height: 100vh;
+}
+#options {
+  width: 30%;
+}
+td {
+  border: none;
+}
+#map {
+  width: 70%;
+  background-color: #e0e0e0;
+}

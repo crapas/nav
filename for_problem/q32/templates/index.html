@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!--css 외부 파일 style.css 삽입-->
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='style.css') }}"
+    />
+    <!--JavaScript 외부 파일 script.js 삽입-->
+    <script src="{{ url_for('static', filename='script.js') }}" defer></script>
+    <title>두 문자열의 길이의 합</title>
+  </head>
+  <body>
+    <table>
+      <tr>
+        <!-- 문자열을 입력받는 두 개의 텍스트 필드를 각각 string1, string2라는 id로 추가-->
+        <td>
+          첫 번째 문자열: <input type="text" id="string1" /><br />
+          두 번째 문자열: <input type="text" id="string2" /><br />
+          <!-- 버튼을 클릭하면 외부 스크립트에 정의한 calculateTotalLength() 함수를 호출-->
+          <button onclick="calculateTotalLength()">Show Result</button>
+        </td>
+        <!-- 출력할 부분을 result라는 id로 지정-->
+        <td>
+          두 문자열 길이의 합: <span id="result">입력된 값이 없습니다.</span>
+        </td>
+      </tr>
+    </table>
+  </body>
+</html>

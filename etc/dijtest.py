@@ -1,0 +1,31 @@
+import sys
+sys.path.append('..')
+from lib.seoul_road_graph import SeoulRoad
+
+simple_road = SeoulRoad(True)
+# simple_road.add_section(1220022800, 1220016500, 1220012000)
+# simple_road.add_section(1220016500, 1220022800, 1220012100)
+# simple_road.add_section(1220022800, 1220017700, 1220012600)
+# simple_road.add_section(1220016500, 1220019400, 1220011100)
+# simple_road.add_section(1220016500, 1220003700, 1220008600)
+# simple_road.add_section(1220016500, 1220003500, 1220008200)
+# simple_road.add_section(1220017700, 1220022800, 1220012700)
+# simple_road.add_section(1220017700, 1220015300, 1220009400)
+# simple_road.add_section(1220015300, 1220017700, 1220009500)
+# simple_road.add_section(1220015300, 1220000300, 1220000500)
+# simple_road.add_section(1220000300, 1220015300, 1220000600)
+# simple_road.add_section(1220000300, 1220003700, 1220007500)
+# simple_road.add_section(1220013900, 1220000300, 1220000400)
+# simple_road.add_section(1220003500, 1220013900, 1220006800)
+# simple_road.add_section(1220003700, 1220016500, 1220008700)
+# simple_road.add_section(1220003700, 1220000300, 1220007400)
+# simple_road.add_section(1220024700, 1220022800, 1220015000)
+# simple_road.add_section(1220028000, 1220024700, 1220018200)
+# simple_road.add_section(1220028000, 1220024100, 1220018400)
+# simple_road.add_section(1220024100, 1220019400, 1220014000)
+# simple_road.add_section(1220024100, 1220028000, 1220018500)
+# simple_road.add_section(1220019400, 1220024100, 1220014100)
+# simple_road.add_section(1220019400, 1220016500, 1220011000)
+
+print(simple_road.dijkstra_path(
+    1220028000, 1220015300, 'distance', 'static'))
